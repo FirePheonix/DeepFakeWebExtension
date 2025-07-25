@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-image {
+            max-width: 300px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Extension Deepfake Detection Test</h1>
+    <p>This page contains test images to verify the web extension is working correctly.</p>
+    
+    <h2>Test Images</h2>
+    <p>Load the web extension and click "Start Detection" to see highlighted images with "Run Deepfake Analysis" buttons.</p>
+    
+    <img src="https://picsum.photos/300/200?random=1" alt="Test Image 1" class="test-image">
+    <img src="https://picsum.photos/300/200?random=2" alt="Test Image 2" class="test-image">
+    <img src="https://picsum.photos/300/200?random=3" alt="Test Image 3" class="test-image">
+    
+    <h2>Instructions</h2>
+    <ol>
+        <li>Make sure your Django backend is running on http://127.0.0.1:8000</li>
+        <li>Load the web extension in Chrome</li>
+        <li>Click the extension icon and then "Start Detection"</li>
+        <li>You should see green boxes around the images above</li>
+        <li>Click "Run Deepfake Analysis" on any image to test the API call</li>
+        <li><strong>Clipboard Test:</strong> Right-click on any image below, select "Copy image", then open the extension popup and press Ctrl+V or click "Paste Image"</li>
+    </ol>
+</body>
+</html> 

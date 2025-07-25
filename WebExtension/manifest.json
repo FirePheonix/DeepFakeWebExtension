@@ -1,0 +1,35 @@
+{
+    "manifest_version": 3,
+    "name": "Media Detector",
+    "description": "Detects and highlights videos and images on web pages.",
+    "version": "1.0",
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "clipboardRead"
+    ],
+    "action": {
+        "default_popup": "popul.html",
+        "default_icon": "icon.png"
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"]
+        }
+    ],
+
+    "background": {
+        "service_worker": "background.js"
+    },
+
+    "options_page": "options.html",
+
+    "host_permissions": [
+        "<all_urls>"
+    ]
+
+}
+
