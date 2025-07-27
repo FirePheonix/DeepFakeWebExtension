@@ -3,40 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Extension Test</title>
+    <title>Deepfake Detection Test Page</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
         }
-        .test-image {
-            max-width: 300px;
-            margin: 20px 0;
-            border: 1px solid #ccc;
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .image-item {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .image-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .image-item h3 {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        .image-item p {
+            color: #777;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #2196f3;
+        }
+        .instructions h2 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+            color: #424242;
         }
     </style>
 </head>
 <body>
-    <h1>Web Extension Deepfake Detection Test</h1>
-    <p>This page contains test images to verify the web extension is working correctly.</p>
-    
-    <h2>Test Images</h2>
-    <p>Load the web extension and click "Start Detection" to see highlighted images with "Run Deepfake Analysis" buttons.</p>
-    
-    <img src="https://picsum.photos/300/200?random=1" alt="Test Image 1" class="test-image">
-    <img src="https://picsum.photos/300/200?random=2" alt="Test Image 2" class="test-image">
-    <img src="https://picsum.photos/300/200?random=3" alt="Test Image 3" class="test-image">
-    
-    <h2>Instructions</h2>
-    <ol>
-        <li>Make sure your Django backend is running on http://127.0.0.1:8000</li>
-        <li>Load the web extension in Chrome</li>
-        <li>Click the extension icon and then "Start Detection"</li>
-        <li>You should see green boxes around the images above</li>
-        <li>Click "Run Deepfake Analysis" on any image to test the API call</li>
-        <li><strong>Clipboard Test:</strong> Right-click on any image below, select "Copy image", then open the extension popup and press Ctrl+V or click "Paste Image"</li>
-    </ol>
+    <div class="container">
+        <h1>🧪 Deepfake Detection Test Page</h1>
+        
+        <div class="instructions">
+            <h2>How to Test the Voting System:</h2>
+            <ol>
+                <li>Install the Media Detector extension</li>
+                <li>Click the extension icon to open the popup</li>
+                <li>Click "Start Detection" to highlight images</li>
+                <li>Use the 👎 (green) and 👍 (red) buttons to vote on images</li>
+                <li>Watch the border colors change based on community votes</li>
+                <li>Try the "AI Analysis" button for machine learning detection</li>
+            </ol>
+        </div>
+
+        <div class="image-grid">
+            <div class="image-item">
+                <img src="https://picsum.photos/400/300?random=1" alt="Test Image 1">
+                <h3>Sample Image 1</h3>
+                <p>This is a sample image for testing the deepfake detection system. Vote whether you think it's real or fake!</p>
+            </div>
+            
+            <div class="image-item">
+                <img src="https://picsum.photos/400/300?random=2" alt="Test Image 2">
+                <h3>Sample Image 2</h3>
+                <p>Another test image to demonstrate the voting functionality. The community votes will determine the border color.</p>
+            </div>
+            
+            <div class="image-item">
+                <img src="https://picsum.photos/400/300?random=3" alt="Test Image 3">
+                <h3>Sample Image 3</h3>
+                <p>More fake images for testing! The extension will highlight these with green or red borders based on votes.</p>
+            </div>
+            
+            <div class="image-item">
+                <img src="https://picsum.photos/400/300?random=4" alt="Test Image 4">
+                <h3>Sample Image 4</h3>
+                <p>Final test image. Remember: Green border = community thinks it's fake, Red border = community thinks it's real.</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

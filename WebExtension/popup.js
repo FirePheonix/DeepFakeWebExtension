@@ -1,4 +1,99 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Simple MongoDB functionality for popup
+  class SimpleMongoDB {
+    constructor() {
+      this.backendUrl = 'http://localhost:3000';
+      this.database = 'deepfake_votes';
+      this.collection = 'image_votes';
+    }
+
+    async findImageVotes(imageUrl) {
+      try {
+        const response = await fetch(`${this.backendUrl}/api/votes/${encodeURIComponent(imageUrl)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          return result || { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+        } else {
+          return { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+        }
+      } catch (error) {
+        console.error('Error finding image votes:', error);
+        return { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+      }
+    }
+
+    async updateImageVotes(imageUrl, isFake) {
+      try {
+        const response = await fetch(`${this.backendUrl}/api/votes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            imageUrl: imageUrl,
+            isFake: isFake
+          })
+        });
+
+        const result = await response.json();
+        return result.success;
+      } catch (error) {
+        console.error('Error updating image votes:', error);
+        return false;
+      }
+    }
+
+    // For demo purposes, create a mock implementation that works without any backend
+    async mockFindImageVotes(imageUrl) {
+      // Use chrome.storage as a simple local database
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['imageVotes'], (result) => {
+          const votes = result.imageVotes || {};
+          const imageVotes = votes[imageUrl] || { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+          resolve(imageVotes);
+        });
+      });
+    }
+
+    async mockUpdateImageVotes(imageUrl, isFake) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get(['imageVotes'], (result) => {
+          const votes = result.imageVotes || {};
+          const existingVotes = votes[imageUrl] || { fakeVotes: 0, realVotes: 0 };
+          
+          votes[imageUrl] = {
+            imageUrl: imageUrl,
+            fakeVotes: existingVotes.fakeVotes + (isFake ? 1 : 0),
+            realVotes: existingVotes.realVotes + (isFake ? 0 : 1),
+            lastUpdated: new Date().toISOString()
+          };
+
+          chrome.storage.local.set({ imageVotes: votes }, () => {
+            resolve(true);
+          });
+        });
+      });
+    }
+
+    // Use real server methods (MongoDB backend)
+    async getImageVotes(imageUrl) {
+      return await this.findImageVotes(imageUrl);
+    }
+
+    async voteForImage(imageUrl, isFake) {
+      return await this.updateImageVotes(imageUrl, isFake);
+    }
+  }
+
+  // Create global instance
+  const simpleMongoDB = new SimpleMongoDB();
+  
   const startBtn = document.getElementById('start-btn');
   const stopBtn = document.getElementById('stop-btn');
   const statusDiv = document.getElementById('status');
@@ -243,17 +338,83 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.elements && response.elements.length > 0) {
               statusHTML += '<div class="media-list">';
               response.elements.forEach((item, index) => {
-                if (item.type === 'image') {
-                  statusHTML += `<div class="media-item" id="media-item-${index}">${index + 1}. IMAGE <button class="analyze-btn" data-src="${item.src}" data-index="${index}">Run Deepfake Analysis</button><span class="analysis-result" id="analysis-result-${index}"></span></div>`;
-                } else {
-                  statusHTML += `<div class="media-item">${index + 1}. ${item.type.toUpperCase()}</div>`;
-                }
+                              if (item.type === 'image') {
+                statusHTML += `<div class="media-item" id="media-item-${index}">
+                  ${index + 1}. IMAGE 
+                  <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="vote-fake-btn" data-src="${item.src}" data-index="${index}" style="padding: 4px 8px; background: #34a853; color: white; border: none; border-radius: 3px; cursor: pointer;">👎 Vote Fake</button>
+                    <button class="vote-real-btn" data-src="${item.src}" data-index="${index}" style="padding: 4px 8px; background: #ea4335; color: white; border: none; border-radius: 3px; cursor: pointer;">👍 Vote Real</button>
+                    <button class="analyze-btn" data-src="${item.src}" data-index="${index}">AI Analysis</button>
+                  </div>
+                  <div class="vote-counts" id="vote-counts-${index}" style="font-size: 11px; color: #666; margin-top: 4px;"></div>
+                  <span class="analysis-result" id="analysis-result-${index}"></span>
+                </div>`;
+              } else {
+                statusHTML += `<div class="media-item">${index + 1}. ${item.type.toUpperCase()}</div>`;
+              }
               });
               statusHTML += '</div>';
             }
             statusDiv.innerHTML = statusHTML;
-            // Add event listeners for analysis buttons
+            // Add event listeners for voting and analysis buttons
             const analyzeBtns = document.querySelectorAll('.analyze-btn');
+            const voteFakeBtns = document.querySelectorAll('.vote-fake-btn');
+            const voteRealBtns = document.querySelectorAll('.vote-real-btn');
+            
+            // Load vote counts for all images
+            const loadVoteCounts = async () => {
+              for (let i = 0; i < response.elements.length; i++) {
+                const item = response.elements[i];
+                if (item.type === 'image') {
+                  try {
+                    const votes = await simpleMongoDB.getImageVotes(item.src);
+                    const voteCountsDiv = document.getElementById(`vote-counts-${i}`);
+                    if (voteCountsDiv) {
+                      voteCountsDiv.textContent = `${votes.fakeVotes} fake, ${votes.realVotes} real`;
+                    }
+                  } catch (error) {
+                    console.error('Error loading vote counts:', error);
+                  }
+                }
+              }
+            };
+            
+            // Load initial vote counts
+            setTimeout(loadVoteCounts, 100);
+            
+            // Fake vote button handlers
+            voteFakeBtns.forEach(btn => {
+              btn.addEventListener('click', async (e) => {
+                const src = btn.getAttribute('data-src');
+                const idx = btn.getAttribute('data-index');
+                try {
+                  await simpleMongoDB.voteForImage(src, true);
+                  await loadVoteCounts();
+                  btn.style.background = '#2e8b57';
+                  setTimeout(() => btn.style.background = '#34a853', 500);
+                } catch (error) {
+                  console.error('Error voting fake:', error);
+                }
+              });
+            });
+            
+            // Real vote button handlers
+            voteRealBtns.forEach(btn => {
+              btn.addEventListener('click', async (e) => {
+                const src = btn.getAttribute('data-src');
+                const idx = btn.getAttribute('data-index');
+                try {
+                  await simpleMongoDB.voteForImage(src, false);
+                  await loadVoteCounts();
+                  btn.style.background = '#d33b2c';
+                  setTimeout(() => btn.style.background = '#ea4335', 500);
+                } catch (error) {
+                  console.error('Error voting real:', error);
+                }
+              });
+            });
+            
+            // Analysis button handlers
             analyzeBtns.forEach(btn => {
               btn.addEventListener('click', async (e) => {
                 const src = btn.getAttribute('data-src');

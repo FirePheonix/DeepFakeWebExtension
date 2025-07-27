@@ -2,6 +2,101 @@
 let isDetecting = false;
 let detectedElements = [];
 
+// Simple MongoDB functionality for content script
+class SimpleMongoDB {
+  constructor() {
+    this.backendUrl = 'http://localhost:3000';
+    this.database = 'deepfake_votes';
+    this.collection = 'image_votes';
+  }
+
+  async findImageVotes(imageUrl) {
+    try {
+      const response = await fetch(`${this.backendUrl}/api/votes/${encodeURIComponent(imageUrl)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return result || { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+      } else {
+        return { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+      }
+    } catch (error) {
+      console.error('Error finding image votes:', error);
+      return { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+    }
+  }
+
+  async updateImageVotes(imageUrl, isFake) {
+    try {
+      const response = await fetch(`${this.backendUrl}/api/votes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          imageUrl: imageUrl,
+          isFake: isFake
+        })
+      });
+
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error('Error updating image votes:', error);
+      return false;
+    }
+  }
+
+  // For demo purposes, create a mock implementation that works without any backend
+  async mockFindImageVotes(imageUrl) {
+    // Use chrome.storage as a simple local database
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['imageVotes'], (result) => {
+        const votes = result.imageVotes || {};
+        const imageVotes = votes[imageUrl] || { imageUrl, fakeVotes: 0, realVotes: 0, lastUpdated: new Date().toISOString() };
+        resolve(imageVotes);
+      });
+    });
+  }
+
+  async mockUpdateImageVotes(imageUrl, isFake) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['imageVotes'], (result) => {
+        const votes = result.imageVotes || {};
+        const existingVotes = votes[imageUrl] || { fakeVotes: 0, realVotes: 0 };
+        
+        votes[imageUrl] = {
+          imageUrl: imageUrl,
+          fakeVotes: existingVotes.fakeVotes + (isFake ? 1 : 0),
+          realVotes: existingVotes.realVotes + (isFake ? 0 : 1),
+          lastUpdated: new Date().toISOString()
+        };
+
+        chrome.storage.local.set({ imageVotes: votes }, () => {
+          resolve(true);
+        });
+      });
+    });
+  }
+
+  // Use real server methods (MongoDB backend)
+  async getImageVotes(imageUrl) {
+    return await this.findImageVotes(imageUrl);
+  }
+
+  async voteForImage(imageUrl, isFake) {
+    return await this.updateImageVotes(imageUrl, isFake);
+  }
+}
+
+// Create global instance
+const simpleMongoDB = new SimpleMongoDB();
+
 function getArticleText() {
   const article = document.querySelector("article");
   if (article) return article.innerText;
@@ -54,13 +149,78 @@ function createHighlightBox(element, type) {
   tag.textContent = type.toUpperCase();
 
   if (type === 'image') {
-    // Button
+    // Create voting buttons container
+    const votingContainer = document.createElement('div');
+    votingContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 8px;';
+    
+    // Fake vote button (dislike emoji with green bg)
+    const fakeBtn = document.createElement('button');
+    fakeBtn.innerHTML = '👎';
+    fakeBtn.title = 'Vote as Fake';
+    fakeBtn.style.cssText = 'padding: 4px 8px; font-size: 14px; background: #34a853; color: white; border: none; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 4px;';
+    
+    // Real vote button (like emoji with red bg)
+    const realBtn = document.createElement('button');
+    realBtn.innerHTML = '👍';
+    realBtn.title = 'Vote as Real';
+    realBtn.style.cssText = 'padding: 4px 8px; font-size: 14px; background: #ea4335; color: white; border: none; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 4px;';
+    
+    // Vote counts display
+    const voteCounts = document.createElement('div');
+    voteCounts.style.cssText = 'font-size: 11px; color: #666; margin-top: 4px;';
+    
+    // Load initial vote counts
+    const loadVoteCounts = async () => {
+      try {
+        const votes = await simpleMongoDB.getImageVotes(element.src);
+        voteCounts.textContent = `${votes.fakeVotes} fake, ${votes.realVotes} real`;
+        
+        // Update highlight color based on votes
+        if (votes.fakeVotes >= votes.realVotes) {
+          highlight.style.borderColor = '#34a853';
+          highlight.style.background = 'rgba(52, 168, 83, 0.1)';
+        } else {
+          highlight.style.borderColor = '#ea4335';
+          highlight.style.background = 'rgba(234, 67, 53, 0.1)';
+        }
+      } catch (error) {
+        console.error('Error loading vote counts:', error);
+      }
+    };
+    
+    // Fake vote handler
+    fakeBtn.addEventListener('click', async () => {
+      try {
+        await simpleMongoDB.voteForImage(element.src, true);
+        await loadVoteCounts();
+        fakeBtn.style.background = '#2e8b57';
+        setTimeout(() => fakeBtn.style.background = '#34a853', 500);
+      } catch (error) {
+        console.error('Error voting fake:', error);
+      }
+    });
+    
+    // Real vote handler
+    realBtn.addEventListener('click', async () => {
+      try {
+        await simpleMongoDB.voteForImage(element.src, false);
+        await loadVoteCounts();
+        realBtn.style.background = '#d33b2c';
+        setTimeout(() => realBtn.style.background = '#ea4335', 500);
+      } catch (error) {
+        console.error('Error voting real:', error);
+      }
+    });
+    
+    // Deepfake analysis button
     const detectBtn = document.createElement('button');
-    detectBtn.textContent = 'Run Deepfake Analysis';
-    detectBtn.style.cssText = 'margin-left: 8px; padding: 2px 8px; font-size: 12px; background: #4285f4; color: #fff; border: none; border-radius: 3px; cursor: pointer;';
+    detectBtn.textContent = 'AI Analysis';
+    detectBtn.style.cssText = 'padding: 2px 8px; font-size: 12px; background: #4285f4; color: #fff; border: none; border-radius: 3px; cursor: pointer;';
+    
     // Result span
     const resultSpan = document.createElement('span');
     resultSpan.style.cssText = 'margin-left: 6px; font-size: 12px; font-weight: bold;';
+    
     // Button click handler
     detectBtn.addEventListener('click', async () => {
       console.log('[Deepfake] Button clicked for image:', element.src);
@@ -106,8 +266,19 @@ function createHighlightBox(element, type) {
         resultSpan.textContent = ' Error analyzing image';
       }
     });
-    tag.appendChild(detectBtn);
-    tag.appendChild(resultSpan);
+    
+    // Add all elements to voting container
+    votingContainer.appendChild(fakeBtn);
+    votingContainer.appendChild(realBtn);
+    votingContainer.appendChild(detectBtn);
+    votingContainer.appendChild(resultSpan);
+    
+    // Add voting container and vote counts to tag
+    tag.appendChild(votingContainer);
+    tag.appendChild(voteCounts);
+    
+    // Load initial vote counts after a short delay to ensure MongoDB is loaded
+    setTimeout(loadVoteCounts, 100);
   }
 
   highlight.appendChild(tag);
